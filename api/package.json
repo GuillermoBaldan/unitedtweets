@@ -4,7 +4,8 @@
   "description": "An educational project to learn the MEAN stack based on a course of Victor Robles. This project is about to construct and scale a tweet based social network",
   "main": "index.js",
   "scripts": {
-    "test": "test"
+    "test": "test",
+    "start": "nodemon index.js"
   },
   "repository": {
     "type": "git",
