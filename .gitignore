@@ -1,4 +1,6 @@
 config/
+.vscode/
+.prettierrc.json
 
 # Logs
 logs
