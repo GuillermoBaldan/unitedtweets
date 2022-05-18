@@ -145,6 +145,47 @@ function getUsers(req, res) {
     });
 }
 
+function updateUser(req, res) {
+  const userId = req.params.id;
+  const update = req.body;
+
+  //Delete password property
+  delete update.password;
+
+  if (userId != req.user.sub) {
+    return res
+      .status(500)
+      .send({ message: "No tienes permiso para actualizar este usuario" });
+  }
+
+  User.findByIdAndUpdate(userId, update, { new: true }, (err, userUpdated) => {
+    if (err) return res.status(500).send({ message: "Error en la petición" });
+
+    if (!userUpdated)
+      return res
+        .status(404)
+        .send({ message: "No se ha podido actualizar el usuario" });
+
+    return res.status(200).send({ user: userUpdated });
+  });
+}
+
+function uploadImage(req, res) {
+  const userId = req.params.id;
+
+  if (userId != req.user.sub) {
+    return res
+      .status(500)
+      .send({ message: "No tienes permiso para actualizar este usuario" });
+  }
+
+  if (req.files) {
+    const file_path = req.files.image.path;
+    console.log(file_path);
+    const file_split = file_path.split("\\");
+  }
+}
+
 module.exports = {
   home,
   pruebas,
@@ -152,4 +193,6 @@ module.exports = {
   loginUser,
   getUser,
   getUsers,
+  updateUser,
+  uploadImage,
 };
