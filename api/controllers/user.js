@@ -1,5 +1,6 @@
 "use strict";
 const bcrypt = require("bcrypt-nodejs");
+const mongoosePaginate = require("mongoose-pagination");
 
 const User = require("../models/user");
 const jwt = require("../services/jwt");
