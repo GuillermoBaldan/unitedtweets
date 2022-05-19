@@ -1,6 +1,8 @@
 "use strict";
 const bcrypt = require("bcrypt-nodejs");
 const mongoosePaginate = require("mongoose-pagination");
+const fs = require("fs");
+const path = require("path");
 
 const User = require("../models/user");
 const jwt = require("../services/jwt");
@@ -20,13 +22,7 @@ function pruebas(req, res) {
 function saveUser(req, res) {
   const params = req.body;
   const user = new User();
-  if (
-    params.name &&
-    params.surname &&
-    params.nick &&
-    params.email &&
-    params.password
-  ) {
+  if (params.name && params.surname && params.nick && params.email && params.password) {
     user.name = params.name;
     user.surname = params.surname;
     user.nick = params.nick;
@@ -34,38 +30,26 @@ function saveUser(req, res) {
     user.role = "ROLE_USER";
     user.image = null;
     //Controlamos usuarios duplicados
-    User.find({ $or: [{ email: user.email }, { nick: user.nick }] }).exec(
-      (err, users) => {
-        if (err)
-          return res
-            .status(500)
-            .send({ message: "Error en la petición de usuarios" });
-        if (users && users.length >= 1) {
-          return res
-            .status(200)
-            .send({ message: "El usuario que intentas registrar ya existe" });
-        } else {
-          //Tenemos que guardar la contraseña encriptada
-          bcrypt.hash(params.password, null, null, (err, hash) => {
-            user.password = hash;
-            user.save((err, userStored) => {
-              if (err)
-                return res
-                  .status(500)
-                  .send({ message: "Error al guardar el usuario" });
+    User.find({ $or: [{ email: user.email }, { nick: user.nick }] }).exec((err, users) => {
+      if (err) return res.status(500).send({ message: "Error en la petición de usuarios" });
+      if (users && users.length >= 1) {
+        return res.status(200).send({ message: "El usuario que intentas registrar ya existe" });
+      } else {
+        //Tenemos que guardar la contraseña encriptada
+        bcrypt.hash(params.password, null, null, (err, hash) => {
+          user.password = hash;
+          user.save((err, userStored) => {
+            if (err) return res.status(500).send({ message: "Error al guardar el usuario" });
 
-              if (userStored) {
-                res.status(200).send({ user: userStored });
-              } else {
-                res
-                  .status(404)
-                  .send({ message: "No se ha registrado el usuario" });
-              }
-            });
+            if (userStored) {
+              res.status(200).send({ user: userStored });
+            } else {
+              res.status(404).send({ message: "No se ha registrado el usuario" });
+            }
           });
-        }
+        });
       }
-    );
+    });
   } else {
     res.status(200).send({ message: "Todos los campos son obligatorios" });
   }
@@ -93,15 +77,11 @@ function loginUser(req, res) {
             return res.status(200).send({ user });
           }
         } else {
-          return res
-            .status(404)
-            .send({ message: "El usuario no se ha podido identificar" });
+          return res.status(404).send({ message: "El usuario no se ha podido identificar" });
         }
       });
     } else {
-      return res
-        .status(404)
-        .send({ message: "El usuario no se ha podido identificar" });
+      return res.status(404).send({ message: "El usuario no se ha podido identificar" });
     }
   });
 }
@@ -134,8 +114,7 @@ function getUsers(req, res) {
     .paginate(page, itemsPerPage, (err, users, total) => {
       if (err) return res.status(500).send({ message: "Error en la petición" });
 
-      if (!users)
-        return res.status(404).send({ message: "No hay usuarios disponibles" });
+      if (!users) return res.status(404).send({ message: "No hay usuarios disponibles" });
 
       return res.status(200).send({
         users,
@@ -153,18 +132,13 @@ function updateUser(req, res) {
   delete update.password;
 
   if (userId != req.user.sub) {
-    return res
-      .status(500)
-      .send({ message: "No tienes permiso para actualizar este usuario" });
+    return res.status(500).send({ message: "No tienes permiso para actualizar este usuario" });
   }
 
   User.findByIdAndUpdate(userId, update, { new: true }, (err, userUpdated) => {
     if (err) return res.status(500).send({ message: "Error en la petición" });
 
-    if (!userUpdated)
-      return res
-        .status(404)
-        .send({ message: "No se ha podido actualizar el usuario" });
+    if (!userUpdated) return res.status(404).send({ message: "No se ha podido actualizar el usuario" });
 
     return res.status(200).send({ user: userUpdated });
   });
@@ -174,16 +148,37 @@ function uploadImage(req, res) {
   const userId = req.params.id;
 
   if (userId != req.user.sub) {
-    return res
-      .status(500)
-      .send({ message: "No tienes permiso para actualizar este usuario" });
+    return res.status(500).send({ message: "No tienes permiso para actualizar este usuario" });
   }
 
   if (req.files) {
+    console.log(req.files.image);
     const file_path = req.files.image.path;
     console.log(file_path);
     const file_split = file_path.split("\\");
+    const file_name = file_split[2];
+    console.log(file_name);
+    const exp_split = file_name.split(".");
+    const file_ext = exp_split[1];
+
+    if (userId != req.user.sub) {
+      removeFilesOfUploads(res, file_path, "No tienes permiso para actualizar los datos de usuario");
+    }
+
+    if (file_ext == "png" || file_ext == "jpg" || file_ext == "jpeg" || file_ext == "gif") {
+      //Actualizar documento de usuario logueado
+    } else {
+      removeFilesOfUploads(res, file_path, "Extensión no válida");
+    }
+  } else {
+    return res.status(200).send({ message: "No se han subido archivos" });
   }
+}
+
+function removeFilesOfUploads(res, file_path, message) {
+  fs.unlink(file_path, (err) => {
+    return res.status(200).send({ message: "Extensión no válida" });
+  });
 }
 
 module.exports = {
