@@ -6,6 +6,7 @@ const path = require("path");
 
 const User = require("../models/user");
 const jwt = require("../services/jwt");
+const { exists } = require("../models/user");
 
 function home(req, res) {
   res.status(200).send({
@@ -184,6 +185,26 @@ function removeFilesOfUploads(res, file_path, message) {
   });
 }
 
+function getImageFile(req, res) {
+  const image_file = req.params.imageFile;
+  const path_file = "./uploads/users/" + image_file;
+
+  /*   fs.exists(path_file, (exists) => {
+    if (exists) {
+      res.sendFile(path.resolve(path_file));
+    } else {
+      res.status(200).send({ message: "No existe la imagen" });
+    }
+  }); */
+  fs.access(path_file, fs.constants.R_OK, (err) => {
+    if (err) {
+      res.status(200).send({ message: "No existe la imagen" });
+    } else {
+      res.sendFile(path.resolve(path_file));
+    }
+  });
+}
+
 module.exports = {
   home,
   pruebas,
@@ -193,4 +214,5 @@ module.exports = {
   getUsers,
   updateUser,
   uploadImage,
+  getImageFile,
 };
